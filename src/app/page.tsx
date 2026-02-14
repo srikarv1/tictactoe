@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
-const GAME_WIDTH = 320;
+const GAME_WIDTH = 600;
 const GAME_HEIGHT = 480;
-const RHEA_WIDTH = 60;
-const RHEA_HEIGHT = 60;
-const SRIKAR_WIDTH = 60;
-const SRIKAR_HEIGHT = 60;
-const MOVE_STEP = 40;
-const FALL_SPEED = 4;
+const RHEA_WIDTH = 80;
+const RHEA_HEIGHT = 80;
+const SRIKAR_WIDTH = 80;
+const SRIKAR_HEIGHT = 80;
+const MOVE_STEP = 50;
+const FALL_SPEED = 5;
 
 function getRandomX() {
 	return Math.floor(Math.random() * (GAME_WIDTH - SRIKAR_WIDTH));
@@ -50,7 +50,7 @@ export default function DodgingGame() {
 		for (const s of srikars) {
 			const collide =
 				s.y + SRIKAR_HEIGHT > GAME_HEIGHT - RHEA_HEIGHT - 10 &&
-				s.y < GAME_HEIGHT - 10 &&
+				s.y < GAME_HEIGHT - 10 + RHEA_HEIGHT &&
 				s.x < rheaX + RHEA_WIDTH &&
 				s.x + SRIKAR_WIDTH > rheaX;
 			if (collide) {
