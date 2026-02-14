@@ -5,37 +5,44 @@ import Image from "next/image";
 
 const GAME_WIDTH = 600;
 const GAME_HEIGHT = 480;
-const RHEA_WIDTH = 80;
-const RHEA_HEIGHT = 80;
-const SRIKAR_WIDTH = 80;
-const SRIKAR_HEIGHT = 80;
+const PLAYER_WIDTH = 80;
+const PLAYER_HEIGHT = 80;
+const FALL_WIDTH = 60;
+const FALL_HEIGHT = 60;
 const MOVE_STEP = 50;
-const FALL_SPEED = 5;
+const FALL_SPEED = 2;
+const OG_PROB = 0.7; // 70% chance for OG, 30% for Rhea
 
 function getRandomX() {
-	return Math.floor(Math.random() * (GAME_WIDTH - SRIKAR_WIDTH));
+	return Math.floor(Math.random() * (GAME_WIDTH - FALL_WIDTH));
 }
 
-export default function DodgingGame() {
-	const [rheaX, setRheaX] = useState(GAME_WIDTH / 2 - RHEA_WIDTH / 2);
-	const [srikars, setSrikars] = useState([
-		{ x: getRandomX(), y: -SRIKAR_HEIGHT },
-	]);
+function getRandomFaller() {
+	if (Math.random() < OG_PROB) {
+		return { type: "og", x: getRandomX(), y: -FALL_HEIGHT };
+	} else {
+		return { type: "rhea", x: getRandomX(), y: -FALL_HEIGHT };
+	}
+}
+
+export default function SrikarLovesOtherGirls() {
+	const [playerX, setPlayerX] = useState(GAME_WIDTH / 2 - PLAYER_WIDTH / 2);
+	const [fallers, setFallers] = useState([getRandomFaller()]);
 	const [score, setScore] = useState(0);
 	const [gameOver, setGameOver] = useState(false);
 	const animationRef = useRef<number | null>(null);
 
-	// Move Srikars down
+	// Move fallers down
 	useEffect(() => {
 		if (gameOver) return;
 		function animate() {
-			setSrikars((prev) => {
-				let next = prev.map((s) => ({ ...s, y: s.y + FALL_SPEED }));
-				// Remove Srikars that are out of bounds, add new one if needed
+			setFallers((prev) => {
+				let next = prev.map((f) => ({ ...f, y: f.y + FALL_SPEED }));
+				// Add new faller if needed
 				if (next.length === 0 || next[next.length - 1].y > 100) {
-					next.push({ x: getRandomX(), y: -SRIKAR_HEIGHT });
+					next.push(getRandomFaller());
 				}
-				next = next.filter((s) => s.y < GAME_HEIGHT);
+				next = next.filter((f) => f.y < GAME_HEIGHT);
 				return next;
 			});
 			animationRef.current = requestAnimationFrame(animate);
@@ -44,23 +51,32 @@ export default function DodgingGame() {
 		return () => cancelAnimationFrame(animationRef.current!);
 	}, [gameOver]);
 
-	// Collision detection
+	// Collision detection and scoring
 	useEffect(() => {
 		if (gameOver) return;
-		for (const s of srikars) {
-			const collide =
-				s.y + SRIKAR_HEIGHT > GAME_HEIGHT - RHEA_HEIGHT - 10 &&
-				s.y < GAME_HEIGHT - 10 + RHEA_HEIGHT &&
-				s.x < rheaX + RHEA_WIDTH &&
-				s.x + SRIKAR_WIDTH > rheaX;
-			if (collide) {
-				setGameOver(true);
-				return;
+		setFallers((prev) => {
+			let updated = [];
+			for (const f of prev) {
+				const collide =
+					f.y + FALL_HEIGHT > GAME_HEIGHT - PLAYER_HEIGHT - 10 &&
+					f.y < GAME_HEIGHT - 10 + PLAYER_HEIGHT &&
+					f.x < playerX + PLAYER_WIDTH &&
+					f.x + FALL_WIDTH > playerX;
+				if (collide) {
+					if (f.type === "og") {
+						setScore((s) => s + 1);
+						// OG collected, don't add to updated
+						continue;
+					} else if (f.type === "rhea") {
+						setGameOver(true);
+						return updated; // End game
+					}
+				}
+				updated.push(f);
 			}
-		}
-		// Score
-		setScore((score) => score + 1);
-	}, [srikars, rheaX, gameOver]);
+			return updated;
+		});
+	}, [fallers, playerX, gameOver]);
 
 	// Keyboard controls
 	useEffect(() => {
@@ -74,14 +90,14 @@ export default function DodgingGame() {
 	}, [gameOver]);
 
 	function moveLeft() {
-		setRheaX((x) => Math.max(0, x - MOVE_STEP));
+		setPlayerX((x) => Math.max(0, x - MOVE_STEP));
 	}
 	function moveRight() {
-		setRheaX((x) => Math.min(GAME_WIDTH - RHEA_WIDTH, x + MOVE_STEP));
+		setPlayerX((x) => Math.min(GAME_WIDTH - PLAYER_WIDTH, x + MOVE_STEP));
 	}
 	function restart() {
-		setRheaX(GAME_WIDTH / 2 - RHEA_WIDTH / 2);
-		setSrikars([{ x: getRandomX(), y: -SRIKAR_HEIGHT }]);
+		setPlayerX(GAME_WIDTH / 2 - PLAYER_WIDTH / 2);
+		setFallers([getRandomFaller()]);
 		setScore(0);
 		setGameOver(false);
 	}
@@ -89,39 +105,67 @@ export default function DodgingGame() {
 	return (
 		<div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-pink-300">
 			<h1 className="text-3xl font-bold text-pink-600 mb-4">
-				Rhea Dodges Srikar!
+				Srikar Loves OTHER GIRLS
 			</h1>
+			<p className="mb-2 text-lg text-pink-700">
+				Collect OGs for points, dodge Rhea!
+			</p>
 			<div
 				className="relative bg-white border-4 border-pink-300 rounded-xl shadow-lg"
 				style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}
 			>
-				{/* Srikars */}
-				{srikars.map((s, i) => (
-					<Image
-						key={i}
-						src="/srikar.jpeg"
-						alt="Srikar"
-						width={SRIKAR_WIDTH}
-						height={SRIKAR_HEIGHT}
-						style={{
-							position: "absolute",
-							left: s.x,
-							top: s.y,
-							transition: "none",
-							zIndex: 2,
-						}}
-					/>
-				))}
-				{/* Rhea */}
+				{/* Fallers */}
+				{fallers.map((f, i) =>
+					f.type === "og" ? (
+						<div
+							key={i}
+							style={{
+								position: "absolute",
+								left: f.x,
+								top: f.y,
+								width: FALL_WIDTH,
+								height: FALL_HEIGHT,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								fontWeight: "bold",
+								fontSize: 28,
+								color: "#fff",
+								background: "#f472b6",
+								borderRadius: 12,
+								boxShadow: "0 2px 8px #f472b6aa",
+								zIndex: 2,
+							}}
+						>
+							OG
+						</div>
+					) : (
+						<Image
+							key={i}
+							src="/rhea.jpeg"
+							alt="Rhea"
+							width={FALL_WIDTH}
+							height={FALL_HEIGHT}
+							style={{
+								position: "absolute",
+								left: f.x,
+								top: f.y,
+								transition: "none",
+								zIndex: 2,
+							}}
+						/>
+					)
+				)}
+				{/* Srikar */}
 				<Image
-					src="/rhea.jpeg"
-					alt="Rhea"
-					width={RHEA_WIDTH}
-					height={RHEA_HEIGHT}
+					src="/srikar.jpeg"
+					alt="Srikar"
+					width={PLAYER_WIDTH}
+					height={PLAYER_HEIGHT}
 					style={{
 						position: "absolute",
-						left: rheaX,
-						top: GAME_HEIGHT - RHEA_HEIGHT - 10,
+						left: playerX,
+						top: GAME_HEIGHT - PLAYER_HEIGHT - 10,
 						transition: "left 0.1s",
 						zIndex: 3,
 					}}
