@@ -62,6 +62,17 @@ export default function DodgingGame() {
 		setScore((score) => score + 1);
 	}, [srikars, rheaX, gameOver]);
 
+	// Keyboard controls
+	useEffect(() => {
+		if (gameOver) return;
+		function handleKey(e: KeyboardEvent) {
+			if (e.key === "ArrowLeft") moveLeft();
+			if (e.key === "ArrowRight") moveRight();
+		}
+		window.addEventListener("keydown", handleKey);
+		return () => window.removeEventListener("keydown", handleKey);
+	}, [gameOver]);
+
 	function moveLeft() {
 		setRheaX((x) => Math.max(0, x - MOVE_STEP));
 	}
